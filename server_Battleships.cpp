@@ -5,6 +5,7 @@
 #include <vector>
 #include <algorithm>
 #include <cstring>
+#include <random>
 
 #include "server_Battleships_struct.hpp"
 
@@ -52,7 +53,8 @@ public:
     void player_surrenders(int cli_id);
     bool bomb_space(cord_board bomb, int cli_id);
     bool set_player_AI(int cli_id);
-    void run_KURT();
+    bool run_KURT();
+    bool run_KURT_ships();
 
     /* --- Game_ended --- state: END --- */
 
@@ -281,8 +283,8 @@ bool Battleships::game_start_ship(int cli_id)
             if (players.at(0).cli_id == cli_id)
             {
                 this->state = ship;
-                print_line();
-                printf("Host Started the Game -> state changed to SHIP\n");
+
+                printf("%3d - Host Started the Game -> state changed to SHIP\n", (*print_num)++);
                 print_line();
                 return true;
             }
@@ -305,15 +307,16 @@ bool Battleships::add_ships(std::vector<ship_placement> ship_list, int cli_id)
             {
                 ship_checker.erase(ship_checker.begin() + i);
                 printf("%3d - Removed ship_list of player %d\n", (*print_num)++, cli_id);
+                break;
             }
         }
 
         multiple_ship_checker msc;
         msc.add_ships(ship_list, cli_id);
         ship_checker.push_back(msc);
-        return true;
         printf("%3d - Added new ships to ship_list for player %d\n", (*print_num)++, cli_id);
         print_line();
+        return true;
     }
     return false;
 }
@@ -324,7 +327,7 @@ bool Battleships::game_start()
     if (state != ship)
         return false;
 
-    if (ship_checker.size() != players.size())
+    if (!run_KURT_ships())
         return false;
 
     print_line();
@@ -446,7 +449,7 @@ bool Battleships::set_player_AI(int cli_id)
     {
         if (players.at(i).cli_id == cli_id)
         {
-            if (players.at(i).state == Alive)
+            if (players.at(i).state == Alive || players.at(i).state == Player)
             {
                 players.at(i).state = AI;
                 printf("%3d - Player %d has been changed to KURT\n", (*print_num)++, cli_id);
@@ -461,7 +464,7 @@ bool Battleships::set_player_AI(int cli_id)
             }
         }
     }
-    printf("%3d - Player %d has been changed to KURT\n", (*print_num)++, cli_id);
+    printf("%3d - Player %d hasn't been changed to KURT\n", (*print_num)++, cli_id);
     print_line();
     return false;
 }
@@ -515,7 +518,7 @@ bool Battleships::bomb_space(cord_board bomb, int cli_id) // true -> re-do else 
             /* --- is player dead ---*/
             if (players.at(i).state == Dead)
             {
-                printf("%3d - Player %d is dead, you cant shot him that would break the geneva convention!!\n", (*print_num)++, cli_id);
+                printf("%3d - Player %d is dead, you cant shot him that would break the geneva convention!!\n", (*print_num)++, bomb.cli_id);
                 print_line();
                 return true;
             }
@@ -535,7 +538,7 @@ bool Battleships::bomb_space(cord_board bomb, int cli_id) // true -> re-do else 
 
                 /*--- set pos on board_show to O - miss --- */
                 board_list_show.at(i).board[bomb.x][bomb.y] = 'O';
-                printf("%3d - Player %d has hit was a miss\n", (*print_num)++, cli_id);
+                printf("%3d - Player %d hit was a miss\n", (*print_num)++, cli_id);
                 print_line();
                 return false;
             }
@@ -546,7 +549,7 @@ bool Battleships::bomb_space(cord_board bomb, int cli_id) // true -> re-do else 
                 if (char_board_show == 'X' || char_board_show == 'F')
                 {
                     /*--- you hit a poition thats already been hit --- */
-                    printf("%3d - Player %d has hit a spot that has already been hit\n", (*print_num)++, cli_id);
+                    printf("%3d - Player %d hit a spot that has already been hit\n", (*print_num)++, cli_id);
                     print_line();
                     return true;
                 }
@@ -578,11 +581,12 @@ bool Battleships::bomb_space(cord_board bomb, int cli_id) // true -> re-do else 
                 /* --- if player is has all ships down remove them --- */
                 if (ship_checker.at(i).all_ship_sunk())
                 {
-                    printf("%3d - Player %d has lost all his ship and is now raising the white flag of surrender\n", (*print_num)++, cli_id);
+                    printf("%3d - Player %d has lost all his ship and is now raising the white flag of surrender\n", (*print_num)++, bomb.cli_id);
                     print_line();
                     remove_player(bomb.cli_id);
+                    return true;
                 }
-
+                print_line();
                 return true;
             }
         }
@@ -590,8 +594,153 @@ bool Battleships::bomb_space(cord_board bomb, int cli_id) // true -> re-do else 
     return true;
 }
 
-void Battleships::run_KURT()
+bool Battleships::run_KURT() // true -> re-do else false -> it ran possibly not but not because it broke
 {
+    printf("%3d --- K.U.R.T Running ---\n", (*print_num)++);
+    /* --- is current player an Ai ---*/
+    if (find_player(head->cli_id).state != AI)
+    {
+        printf("%3d - Player %d isnt an AI\n", (*print_num)++, head->cli_id);
+        print_line();
+        return false;
+    }
+
+    std::random_device dev;
+    std::mt19937 rng('K' + 'U' + 'R' + 'T' + dev());
+    std::uniform_int_distribution<std::mt19937::result_type> rand_board_gen(0, players.size() - 1);
+    std::uniform_int_distribution<std::mt19937::result_type> rand_pos_gen(0, 9);
+
+    printf("%3d - K.U.R.T getting enemy board\n", (*print_num)++);
+
+    // random number between 0-3 such that it isnt current_player and that player isnt dead
+    int rand_board = rand_board_gen(rng);
+
+    /* --- random board number cant be of dead player and cant be itself --- */
+    while (players.at(rand_board).state == Dead || players.at(rand_board).cli_id == head->cli_id)
+    {
+        rand_board = rand_board_gen(rng);
+    }
+
+    printf("%3d - K.U.R.T getting enemy position to hit\n", (*print_num)++);
+
+    // random number between 0 - 9 such that it hasnt been hit yet
+    int rand_x = rand_pos_gen(rng);
+    int rand_y = rand_pos_gen(rng);
+    int count = 0;
+
+    /* --- player at rand_board must be a position that isnt hit yet ---*/
+    while (board_list_show.at(rand_board).board[rand_x][rand_y] != '-')
+    {
+        int rand_x = rand_pos_gen(rng);
+        int rand_y = rand_pos_gen(rng);
+        count++;
+        if (count == 1000)
+        {
+            printf("%3d - random went over 1000 random limit please restart KURT\n", (*print_num)++);
+            return true; // instead of returning true we can just run kurt until it hits (but i dont trust it, it gave me unexpected results)
+            break;
+        }
+    }
+
+    printf("%3d - K.U.R.T filling Artilliary \n", (*print_num)++);
+    // add it to cords struct
+    cord_board cord_rand;
+    cord_rand.x = rand_x;
+    cord_rand.y = rand_y;
+    cord_rand.cli_id = players.at(rand_board).cli_id;
+
+    // BLOW IT UP KURT!!
+    return bomb_space(cord_rand, head->cli_id); // since true means shot again then return true which => shot again then shot again
+}
+
+bool Battleships::run_KURT_ships() // true if it succeeds , else false if it failed
+{
+    /* --- get amount of players that arent AI's --- */
+    int amount_players = players.size();
+    for (size_t i = 0; i < players.size(); i++)
+    {
+        if (players.at(i).state == AI)
+        {
+            amount_players--;
+        }
+    }
+
+    /* --- if player amount (exculuding AI's) <= the amount of ships put => continue... --- */
+    if (amount_players > ship_checker.size())
+    {
+        return false;
+    }
+
+    /* --- setup AI's with ships cause they might not have any ---*/
+    for (size_t i = 0; i < players.size(); i++)
+    {
+        if (players.at(i).state = AI)
+        {
+            bool has_no_ship_flag = true;
+
+            /* --- turn on flag if AI has ship ---*/
+            for (size_t j = 0; j < ship_checker.size(); j++)
+            {
+                if (ship_checker.at(j).cli_id == players.at(i).cli_id)
+                {
+                    has_no_ship_flag = false;
+                    break;
+                }
+            }
+
+            /* --- if AI doesnt have ship --- */
+            if (has_no_ship_flag)
+            {
+                std::vector<ship_placement> ship_list;
+
+                ship_placement sp;
+                sp.hor = true;
+                sp.ship = 'A';
+                sp.x = 0;
+                sp.y = 0;
+                ship_list.push_back(sp);
+
+                sp.hor = true;
+                sp.ship = 'B';
+                sp.x = 0;
+                sp.y = 1;
+                ship_list.push_back(sp);
+
+                sp.hor = true;
+                sp.ship = 'C';
+                sp.x = 0;
+                sp.y = 2;
+                ship_list.push_back(sp);
+
+                sp.hor = true;
+                sp.ship = 'D';
+                sp.x = 0;
+                sp.y = 3;
+                ship_list.push_back(sp);
+
+                sp.hor = true;
+                sp.ship = 'S';
+                sp.x = 0;
+                sp.y = 4;
+                ship_list.push_back(sp);
+
+                sp.hor = true;
+                sp.ship = 'D';
+                sp.x = 0;
+                sp.y = 5;
+                ship_list.push_back(sp);
+
+                sp.hor = true;
+                sp.ship = 'S';
+                sp.x = 0;
+                sp.y = 6;
+                ship_list.push_back(sp);
+
+                add_ships(ship_list, players.at(i).cli_id);
+            }
+        }
+    }
+    return true;
 }
 
 Battleships::~Battleships()

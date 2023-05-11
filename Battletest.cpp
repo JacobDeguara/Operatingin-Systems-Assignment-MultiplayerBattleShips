@@ -27,56 +27,57 @@ int main()
     std::vector<ship_placement> ship_list;
 
     ship_placement sp;
-    sp.hor = true;
-    sp.ship = 'A';
-    sp.x = 0;
-    sp.y = 0;
-    ship_list.push_back(sp);
+    {
+        sp.hor = false;
+        sp.ship = 'A';
+        sp.x = 0;
+        sp.y = 0;
+        ship_list.push_back(sp);
 
-    sp.hor = true;
-    sp.ship = 'B';
-    sp.x = 0;
-    sp.y = 1;
-    ship_list.push_back(sp);
+        sp.hor = false;
+        sp.ship = 'B';
+        sp.x = 0;
+        sp.y = 1;
+        ship_list.push_back(sp);
 
-    sp.hor = true;
-    sp.ship = 'C';
-    sp.x = 0;
-    sp.y = 2;
-    ship_list.push_back(sp);
+        sp.hor = false;
+        sp.ship = 'C';
+        sp.x = 0;
+        sp.y = 2;
+        ship_list.push_back(sp);
 
-    sp.hor = true;
-    sp.ship = 'D';
-    sp.x = 0;
-    sp.y = 3;
-    ship_list.push_back(sp);
+        sp.hor = false;
+        sp.ship = 'D';
+        sp.x = 0;
+        sp.y = 3;
+        ship_list.push_back(sp);
 
-    sp.hor = true;
-    sp.ship = 'S';
-    sp.x = 0;
-    sp.y = 4;
-    ship_list.push_back(sp);
+        sp.hor = false;
+        sp.ship = 'S';
+        sp.x = 0;
+        sp.y = 4;
+        ship_list.push_back(sp);
 
-    sp.hor = true;
-    sp.ship = 'D';
-    sp.x = 0;
-    sp.y = 5;
-    ship_list.push_back(sp);
+        sp.hor = false;
+        sp.ship = 'D';
+        sp.x = 0;
+        sp.y = 5;
+        ship_list.push_back(sp);
 
-    sp.hor = true;
-    sp.ship = 'S';
-    sp.x = 0;
-    sp.y = 6;
-    ship_list.push_back(sp);
-
+        sp.hor = false;
+        sp.ship = 'S';
+        sp.x = 0;
+        sp.y = 6;
+        ship_list.push_back(sp);
+    }
     game.add_ships(ship_list, 0);
     game.add_ships(ship_list, 1);
     game.add_ships(ship_list, 0);
-    game.add_ships(ship_list, 2);
 
     game.game_start();
 
     game.add_ships(ship_list, 3);
+    game.set_player_AI(2);
 
     game.game_start();
 
@@ -103,7 +104,7 @@ int main()
 
     printf("%d - player\n", game.get_next_player_node());
     printf("%d - player\n", game.get_next_player_node());
-    */
+
 
     printf("%d - player\n", game.get_next_player_node()); // player 0 turn
 
@@ -125,4 +126,25 @@ int main()
             game.display_boards();
         }
     }
+
+    game.set_player_AI(2);
+    game.get_next_player_node();
+    game.run_KURT();
+    game.get_next_player_node();
+
+    // --- KURT barrage of hits that sometimes fails ---
+    int count = 0;
+    for (size_t i = 0; i < 100; i++)
+    {
+        if (!game.run_KURT())
+            count++;
+        else
+        {
+            count++;
+            i--;
+        }
+    }
+    game.display_boards();
+    printf("count : %d/100\n", count);
+    */
 }
