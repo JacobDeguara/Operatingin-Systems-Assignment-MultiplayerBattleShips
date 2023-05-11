@@ -14,6 +14,7 @@ class client_display
 private:
     std::string command;
 
+    std::string imp_msg;
     std::string msg;
     int count = 0;
 
@@ -24,6 +25,7 @@ public:
     ~client_display();
 
     void linger_message(std::string msg);
+    void important_message(std::string msg);
     void display_players(settings_request_playerlist srp);
     std::string getin();
     void copy_ship_list(std::vector<ship_placement> copy);
@@ -37,6 +39,7 @@ void client_display::display_players(settings_request_playerlist srp)
 {
     system("clear");
     printf("\n");
+    printf("--- %s ---\n", imp_msg.c_str());
     print_line();
     printf("Currently connected players:\n");
 
@@ -82,6 +85,11 @@ void client_display::linger_message(std::string msg)
 {
     this->msg = msg;
     count = MAXLINGER;
+}
+
+void client_display::important_message(std::string msg)
+{
+    this->imp_msg = msg;
 }
 
 std::string client_display::getin()

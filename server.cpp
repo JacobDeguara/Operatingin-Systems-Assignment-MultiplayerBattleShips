@@ -157,11 +157,9 @@ void server::tcp_start_run()
     if (s != 0)
         handle_error_ernum(s, "pthread_cancel");
 
-    /* for some reason thread_megamain does get joined after cancelled
     s = pthread_join(thread_megamain, &ret);
     if (s != 0)
-       handle_error_ernum(s, "pthread_join");
-    */
+        handle_error_ernum(s, "pthread_join");
 };
 
 server::~server()

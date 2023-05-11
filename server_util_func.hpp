@@ -47,7 +47,7 @@ int check_format(std::string str) // [0-9][A-J](h/v)
         return 3;
     }
 
-    if ((str.at(2) != 'h') && (str.at(0) != 'v'))
+    if ((str.at(2) != 'h') && (str.at(2) != 'v'))
     {
         printf("not h|v ");
         return 4;

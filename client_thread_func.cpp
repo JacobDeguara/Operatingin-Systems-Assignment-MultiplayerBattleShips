@@ -18,6 +18,7 @@
 
 void *update_thread(void *arg);
 void *collapse_thread(void *arg);
+void *main_thread(void *arg);
 
 void *update_thread(void *arg)
 {
@@ -31,7 +32,6 @@ void *update_thread(void *arg)
     tcp_client_bulk_data *data = (tcp_client_bulk_data *)arg;
     settings_request_playerlist srp;
     int efd;
-    sleep(2);
     while (1)
     {
         // check if client has left
@@ -67,6 +67,14 @@ void *collapse_thread(void *arg)
     if (ert_j != 0)
         handle_error_ernum(ert_j, "pthread_join");
 
+    ert_j = pthread_cancel(data->threadc->main_thread);
+    if (ert_j != 0)
+        handle_error_ernum(ert_j, "pthread_cancel");
+
+    ert_j = pthread_join(data->threadc->main_thread, &ret);
+    if (ert_j != 0)
+        handle_error_ernum(ert_j, "pthread_join");
+
     return NULL;
 }
 
@@ -87,18 +95,18 @@ void *main_thread(void *arg)
     FD_ZERO(&rfds);
     FD_SET(*data->cfd, &rfds);
     int meta_data_game_started = -1;
-    /*
+
     retval = select(1024, &rfds, NULL, NULL, NULL);
 
     if (retval == -1)
         perror("select()");
     else if (retval)
     {
-        efd = (read(data->cfd, &meta_data_game_started, sizeof(int)));
+        efd = (read(*data->cfd, &meta_data_game_started, sizeof(int)));
         if (efd < 0)
             handle_error("read");
 
-        data->disp->linger_message("GAME STARTED waiting for ships");
+        data->disp->important_message("GAME STARTED waiting for ships");
     }
 
     retval = select(1024, &rfds, NULL, NULL, NULL);
@@ -107,17 +115,17 @@ void *main_thread(void *arg)
         perror("select()");
     else if (retval)
     {
-        efd = (read(data->cfd, &meta_data_game_started, sizeof(int)));
+        efd = (read(*data->cfd, &meta_data_game_started, sizeof(int)));
         if (efd < 0)
             handle_error("read");
 
-        data->disp->linger_message("GAME STARTED");
+        data->disp->important_message("GAME STARTED");
     }
 
     while (1)
     {
+        sleep(1);
     }
-    */
     return NULL;
 }
 #endif // __CLIENT_THREAD_FUNC_H__

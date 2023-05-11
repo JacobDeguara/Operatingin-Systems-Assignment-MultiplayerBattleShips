@@ -207,10 +207,13 @@ void client::tcp_connect_server(int argc, char *argv[])
     if (pthread_create(&threads_global.update_thread, NULL, update_thread, &tcbd) != 0)
         handle_error("thread");
 
+    if (pthread_create(&threads_global.main_thread, NULL, main_thread, &tcbd) != 0)
+        handle_error("thread");
+
     if (pthread_create(&threads_global.collapse_thread, NULL, collapse_thread, &tcbd) != 0)
         handle_error("thread");
 
-        signal(SIGINT, ctrlhandler); // this should never happen but just incase its here
+    signal(SIGINT, ctrlhandler); // this should never happen but just incase its here
     /* --- command prompt style input --- */
     while (1)
     {

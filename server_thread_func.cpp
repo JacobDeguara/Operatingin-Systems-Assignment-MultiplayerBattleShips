@@ -210,20 +210,24 @@ void *megamain_thread(void *arg)
     /* --- if (game state != SHIP) => |loop| else proceed --- */
     while (data->game->get_game_state() != 1)
     {
+        sleep(1);
     }
-    printf("%3d - Game started main_Func noticed - sent waiting for ships message", (*data->print_num)++);
+
+    printf("%3d - Game started main_Func noticed - sent waiting for ships message\n", (*data->print_num)++);
     data->flag1 = false;
 
     /* --- if( game_start() == false ) => |loop| else proceed --- */
     while (!data->game->game_start())
     {
+        sleep(1);
     }
 
-    printf("%3d - Game started main_Func noticed - starting game...", (*data->print_num)++);
+    printf("%3d - Game started main_Func noticed - starting game...\n", (*data->print_num)++);
     data->flag2 = false;
 
     while (1)
     {
+        sleep(1);
     }
 
     return NULL;
@@ -429,6 +433,7 @@ void *main_thread(void *arg)
     /* --- waits for mega main to switch to game SHIP state --- */
     while (data->mmsd->flag1)
     {
+        sleep(1);
     }
 
     int meta_data_game_started = 0;
@@ -443,6 +448,7 @@ void *main_thread(void *arg)
 
     while (data->mmsd->flag2)
     {
+        sleep(1);
     }
 
     meta_data_game_started = 1;
@@ -457,6 +463,7 @@ void *main_thread(void *arg)
 
     while (1)
     {
+        sleep(1);
     }
 
     return NULL;
@@ -517,11 +524,10 @@ void *collapse_thread(void *arg)
     if (ert_j != 0)
         handle_error_ernum(ert_j, "pthread_cancel");
 
-    /*
     ert_j = pthread_join(data->client->thread_main, &ret);
     if (ert_j != 0)
         handle_error_ernum(ert_j, "pthread_join");
-    */
+
     ert_j = pthread_join(data->client->thread_update, &ret);
     if (ert_j != 0)
         handle_error_ernum(ert_j, "pthread_join");
