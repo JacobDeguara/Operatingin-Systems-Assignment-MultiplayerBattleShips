@@ -79,4 +79,50 @@ int main()
     game.add_ships(ship_list, 3);
 
     game.game_start();
+
+    /*
+    game.build_next_player_nodes();
+
+    printf("%d - player\n", game.get_next_player_node());
+    printf("%d - player\n", game.get_next_player_node());
+    printf("%d - player\n", game.get_next_player_node());
+    printf("%d - player\n", game.get_next_player_node());
+    game.move_back_player_node();
+    printf("%d - player\n", game.get_next_player_node());
+    game.remove_next_player_node(3);
+    game.move_back_player_node();
+    printf("%d - player\n", game.get_next_player_node());
+    game.move_back_player_node();
+    printf("%d - player\n", game.get_next_player_node());
+
+    game.player_surrenders(1);
+
+    printf("%d - player\n", game.get_next_player_node());
+    printf("%d - player\n", game.get_next_player_node());
+    printf("%d - player\n", game.get_next_player_node());
+
+    printf("%d - player\n", game.get_next_player_node());
+    printf("%d - player\n", game.get_next_player_node());
+    */
+
+    printf("%d - player\n", game.get_next_player_node()); // player 0 turn
+
+    cord_board bomb;
+    bomb.cli_id = 3;
+    bomb.x = 6;
+    bomb.y = 6;
+
+    game.bomb_space(bomb, 0);
+
+    for (size_t i = 0; i < 5; i++)
+    {
+        for (size_t j = 0; j < 7; j++)
+        {
+            bomb.cli_id = 3;
+            bomb.x = i;
+            bomb.y = j;
+            game.bomb_space(bomb, 0);
+            game.display_boards();
+        }
+    }
 }

@@ -15,6 +15,13 @@ enum status
     Not_Allowed,
 };
 
+struct next_player_node
+{
+    int cli_id;
+    struct next_player_node *next;
+    struct next_player_node *back;
+};
+
 struct player_data
 {
     char name[15]; // name of player
@@ -33,6 +40,11 @@ struct ship_placement
     char ship;
     int x, y;
     bool hor;
+};
+
+struct cord_board
+{
+    int x, y, cli_id;
 };
 
 struct cord
@@ -59,9 +71,9 @@ struct single_ship_checker
             int yplus = 0;
 
             if (ship.hor)
-                yplus = i;
-            else
                 xplus = i;
+            else
+                yplus = i;
 
             pos.x = ship.x + xplus;
             pos.y = ship.y + yplus;
@@ -130,6 +142,11 @@ struct multiple_ship_checker
         }
         std::vector<cord> random;
         return random;
+    }
+
+    std::vector<cord> get_cord_list_at(int i)
+    {
+        return ship_checker_list.at(i).cords;
     }
 
     // true if ship at pos(x,y) exists

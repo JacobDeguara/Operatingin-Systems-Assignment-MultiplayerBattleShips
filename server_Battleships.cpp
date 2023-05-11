@@ -30,6 +30,7 @@ private:
     std::vector<bb> board_list_show;
 
     game_states state = start;
+    struct next_player_node *head = NULL;
 
 public:
     /* --- setting up --- state: START --- */
@@ -48,8 +49,9 @@ public:
 
     bool game_start();     // changes game state to GAME, only if each player has their ships placed.
     void display_boards(); // print each of the boards to the terminal
-    void bomb_space();
-    void set_player_AI();
+    void player_surrenders(int cli_id);
+    bool bomb_space(cord_board bomb, int cli_id);
+    bool set_player_AI(int cli_id);
     void run_KURT();
 
     /* --- Game_ended --- state: END --- */
@@ -60,6 +62,15 @@ public:
     Battleships(int *print_num);
     ~Battleships();
 
+    /* --- next_player builder --- */
+
+    void build_next_player_nodes();           // builds the nodes dictaticing the order
+    bool remove_next_player_node(int cli_id); // removes a node from the rotation
+    void move_back_player_node();             // moves back one step (this is to give the same player a second shot)
+    int get_next_player_node();               // moves forward and returns the next players turn
+    void free_player_nodes(next_player_node *head, next_player_node *temp);
+    // recursivly removes each node from the player node
+
     /* --- Utilities --- */
 
     player_data find_player(int cli_id);        // returns the players player data based on their client_id
@@ -68,6 +79,7 @@ public:
     int get_game_state();                       // returns 0-START, 1-SHIP, 2-GAME, 3-END
     void clear_board(bb *board, int cli_id);    // clears the board passed with '-' and adds @cli_id added
     std::vector<bb> get_show_boards();
+    void sink_all_ships(int cli_id);
 };
 
 Battleships::Battleships(int *print_num)
@@ -178,7 +190,6 @@ player_data Battleships::switch_player(int cli_id)
 
 player_data Battleships::remove_player(int cli_id)
 {
-    print_line();
     auto id = find_player(cli_id);
 
     if (id.state == Player) // id -> player
@@ -192,18 +203,27 @@ player_data Battleships::remove_player(int cli_id)
                     if (players.at(i).cli_id == id.cli_id)
                     {
                         players.erase(players.begin() + i); // remove player from vector
-
+                        print_line();
                         printf("%3d - Player %15s , %d Removed\n", (*print_num)++, id.name, id.cli_id);
                         print_line();
                         return id;
                     }
                 }
             }
-            else
+            else // ship state only
             {
-                /* --- set player to dead or KURT idk whatever seems easier --- */
+                /* --- if player leaves he surrendered --- */
+                player_surrenders(cli_id);
+                return id;
             }
         }
+    }
+
+    if (id.state == Alive || id.state == AI)
+    {
+        /* --- if player leaves he surrendered --- */
+        player_surrenders(cli_id);
+        return id;
     }
 
     if (id.state == Spectator)
@@ -215,7 +235,7 @@ player_data Battleships::remove_player(int cli_id)
                 if (spectators.at(i).cli_id == id.cli_id)
                 {
                     spectators.erase(spectators.begin() + i); // remove spectator from vector
-
+                    print_line();
                     printf("%3d - Player %15s , %d Removed\n", (*print_num)++, id.name, id.cli_id);
                     print_line();
                     return id;
@@ -225,6 +245,7 @@ player_data Battleships::remove_player(int cli_id)
     }
 
     // this shouldn't happen
+    print_line();
     id.state = Not_Allowed;
     printf("%3d - Player %15s , %d wasn't Removed\n", (*print_num)++, id.name, id.cli_id);
     print_line();
@@ -319,6 +340,9 @@ bool Battleships::game_start()
     /* --- create the boards & fill them up --- */
     for (size_t i = 0; i < players.size(); i++)
     {
+        /* --- players.state -> Players => Alive --- */
+        players.at(i).state = Alive;
+
         bb board;
         clear_board(&board, players.at(i).cli_id);
         board_list.push_back(board);
@@ -342,6 +366,9 @@ bool Battleships::game_start()
     printf("%3d - Game state changed to GAME game has started\n", (*print_num)++);
     print_line();
     display_boards();
+
+    /* --- sets up next player data struct ---*/
+    build_next_player_nodes();
     return true;
 }
 
@@ -410,17 +437,161 @@ void Battleships::display_boards()
     }
     printf("\n");
     print_line();
+}
 
-    printf("\n");
-    for (size_t x = 0; x < 10; x++)
+bool Battleships::set_player_AI(int cli_id)
+{
+    print_line();
+    for (size_t i = 0; i < players.size(); i++)
     {
-        for (size_t y = 0; y < 10; y++)
+        if (players.at(i).cli_id == cli_id)
         {
-            printf("%c ", board_list.at(0).board[x][y]);
+            if (players.at(i).state == Alive)
+            {
+                players.at(i).state = AI;
+                printf("%3d - Player %d has been changed to KURT\n", (*print_num)++, cli_id);
+                print_line();
+                return true;
+            }
+            else if (players.at(i).state == Dead)
+            {
+                printf("%3d - Player %d is dead\n", (*print_num)++, cli_id);
+                print_line();
+                return false;
+            }
         }
-        printf("\n");
     }
-    printf("\n");
+    printf("%3d - Player %d has been changed to KURT\n", (*print_num)++, cli_id);
+    print_line();
+    return false;
+}
+
+void Battleships::player_surrenders(int cli_id)
+{
+    print_line();
+    for (size_t i = 0; i < players.size(); i++)
+    {
+        if (players.at(i).cli_id == cli_id)
+        {
+            players.at(i).state = Dead;
+            remove_next_player_node(cli_id);
+            printf("%3d - Player %d has surrendered and is now dead\n", (*print_num)++, cli_id);
+            if (state != ship)
+                sink_all_ships(cli_id);
+
+            print_line();
+            display_boards();
+            return;
+        }
+    }
+    printf("%3d - Player %d wasnt found\n", (*print_num)++, cli_id);
+    print_line();
+}
+
+bool Battleships::bomb_space(cord_board bomb, int cli_id) // true -> re-do else false -> miss
+{
+    print_line();
+    /* --- did correct player play bomb_space ---*/
+    if (head->cli_id != cli_id)
+    {
+        printf("%3d - Player %d shouldn't be using bomb_space since its Player %d turn\n", (*print_num)++, cli_id, head->cli_id);
+        print_line();
+        return false;
+    }
+
+    /* --- did player play bomb_space on himself --- */
+    if (bomb.cli_id == cli_id)
+    {
+        printf("%3d - Player %d bombed himself, action stoped...\n", (*print_num)++, cli_id);
+        print_line();
+        return true;
+    }
+
+    /* --- loop through each player to see which player was hit --- */
+    for (size_t i = 0; i < players.size(); i++)
+    {
+        if (players.at(i).cli_id == bomb.cli_id)
+        {
+            /* --- is player dead ---*/
+            if (players.at(i).state == Dead)
+            {
+                printf("%3d - Player %d is dead, you cant shot him that would break the geneva convention!!\n", (*print_num)++, cli_id);
+                print_line();
+                return true;
+            }
+
+            char char_board = board_list.at(i).board[bomb.x][bomb.y]; // '-' | 'O'
+
+            if (char_board == '-')
+            {
+                char char_board_show = board_list_show.at(i).board[bomb.x][bomb.y]; // '-' | 'A' - 'S' ships
+                if (char_board_show == 'O')
+                {
+                    /*--- you hit a poition thats already been hit --- */
+                    printf("%3d - Player %d has hit a spot that has already been hit\n", (*print_num)++, cli_id);
+                    print_line();
+                    return true;
+                }
+
+                /*--- set pos on board_show to O - miss --- */
+                board_list_show.at(i).board[bomb.x][bomb.y] = 'O';
+                printf("%3d - Player %d has hit was a miss\n", (*print_num)++, cli_id);
+                print_line();
+                return false;
+            }
+            else
+            {
+                char char_board_show = board_list_show.at(i).board[bomb.x][bomb.y]; // '-' | 'X' | 'F'
+
+                if (char_board_show == 'X' || char_board_show == 'F')
+                {
+                    /*--- you hit a poition thats already been hit --- */
+                    printf("%3d - Player %d has hit a spot that has already been hit\n", (*print_num)++, cli_id);
+                    print_line();
+                    return true;
+                }
+
+                /*--- set pos on board_show to X - hit --- */
+                board_list_show.at(i).board[bomb.x][bomb.y] = 'X';
+                printf("%3d - Player %d has hit a ship -%c-\n", (*print_num)++, cli_id, char_board);
+
+                /* --- use ship checker to check if ship has sunk--- */
+                cord c;
+                c.x = bomb.x;
+                c.y = bomb.y;
+
+                if (ship_checker.at(i).hit_ship(c, char_board))
+                {
+                    if (ship_checker.at(i).ship_sunk(c, char_board))
+                    {
+                        auto ship_list = ship_checker.at(i).get_cord_list(c, char_board);
+
+                        for (size_t j = 0; j < ship_list.size(); j++)
+                        {
+                            board_list_show.at(i).board[ship_list.at(j).x][ship_list.at(j).y] = 'F';
+                        }
+
+                        printf("%3d - Player %d has sunk ship hit\n", (*print_num)++, cli_id);
+                    }
+                }
+
+                /* --- if player is has all ships down remove them --- */
+                if (ship_checker.at(i).all_ship_sunk())
+                {
+                    printf("%3d - Player %d has lost all his ship and is now raising the white flag of surrender\n", (*print_num)++, cli_id);
+                    print_line();
+                    remove_player(bomb.cli_id);
+                }
+
+                return true;
+            }
+        }
+    }
+    return true;
+}
+
+void Battleships::run_KURT()
+{
 }
 
 Battleships::~Battleships()
@@ -428,6 +599,95 @@ Battleships::~Battleships()
     print_line();
     printf("%3d - Game Ended\n", (*print_num)++);
     print_line();
+
+    if (head != NULL)
+        free_player_nodes(this->head, this->head->next);
+}
+
+void Battleships::build_next_player_nodes()
+{
+    struct next_player_node *temp_first = (next_player_node *)malloc(sizeof(next_player_node));
+    temp_first->cli_id = players.at(0).cli_id;
+
+    next_player_node *prevoius = temp_first;
+    struct next_player_node *temp_next;
+
+    for (size_t i = 1; i < players.size(); i++)
+    {
+        temp_next = (next_player_node *)malloc(sizeof(next_player_node));
+
+        temp_next->cli_id = players.at(i).cli_id; // set cli_id
+        temp_next->back = prevoius;               // previous to prevoius ptr
+        prevoius->next = temp_next;               // set prevoius ptr next to
+        prevoius = temp_next;                     // set temp_next to prevoius ptr
+    }
+
+    temp_next->next = temp_first;
+    temp_first->back = temp_next;
+
+    this->head = temp_next;
+}
+
+bool Battleships::remove_next_player_node(int cli_id)
+{
+    if (head == NULL)
+        return false;
+
+    auto temp = head;
+    while (temp->cli_id != cli_id) // loop until you find the right node
+    {
+        temp = temp->next;
+        if (temp->cli_id == head->cli_id) // if temp == head meaning we looped back
+        {
+            return false; // failed
+        }
+    }
+
+    if (temp == head)
+    {
+        this->head = this->head->next;
+    }
+
+    auto temp_back = temp->back;
+    auto temp_next = temp->next;
+
+    temp_back->next = temp->next;
+    temp_next->back = temp->back;
+
+    free(temp);
+    return true;
+}
+
+void Battleships::move_back_player_node()
+{
+    if (head == NULL)
+        return;
+
+    this->head = this->head->back;
+}
+
+int Battleships::get_next_player_node()
+{
+    if (head == NULL)
+        return -1;
+
+    this->head = this->head->next; // move head to next_head
+
+    return head->cli_id; // return cli_id
+}
+
+void Battleships::free_player_nodes(next_player_node *head, next_player_node *temp) // head:.1->2->3->4->.1 , free(1) , free(4) , free(3), free(2)
+{
+
+    if (head == temp) // base case: reached the start again
+    {
+        free(head);
+        return;
+    }
+    free_player_nodes(head, temp->next); // recurse
+
+    free(temp);
+    return;
 }
 
 player_data Battleships::find_player(int cli_id)
@@ -518,6 +778,26 @@ void Battleships::clear_board(bb *board, int cli_id)
 std::vector<bb> Battleships::get_show_boards()
 {
     return board_list_show;
+}
+
+void Battleships::sink_all_ships(int cli_id)
+{
+    for (size_t i = 0; i < players.size(); i++)
+    {
+        if (players.at(i).cli_id == cli_id) // find player
+        {
+            for (size_t j = 0; j < ship_checker.at(i).ship_checker_list.size(); j++) // loop through each ship
+            {
+                auto ship = ship_checker.at(i).get_cord_list_at(j);
+
+                for (size_t k = 0; k < ship.size(); k++) // loop through pos of ship
+                {
+                    board_list_show.at(i).board[ship.at(k).x][ship.at(k).y] = 'F'; // make is sunk
+                }
+            }
+            break;
+        }
+    }
 }
 
 #endif // __SERVER_BATTLESHIPS_H__

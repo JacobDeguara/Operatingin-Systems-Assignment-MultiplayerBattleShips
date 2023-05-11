@@ -51,7 +51,7 @@ public:
     void set_player_KURT(int id);
 
     // bombs a space and changes the map
-    void bomb_space(coordinates cords);
+    void bomb_space_(coordinates cords);
 
     // returns the players_copy vector
     vector<player_id_minimal> get_players_boards();
@@ -318,7 +318,7 @@ void Battleships::add_ships(vector<shipp> ship_list, string name)
     print_boards();
 }
 
-void Battleships::bomb_space(coordinates cords)
+void Battleships::bomb_space_(coordinates cords)
 {
     int x = cords.x;
     int y = cords.y;
@@ -553,7 +553,7 @@ void Battleships::run_KURT()
     cord_rand.board = rand_board;
 
     // BLOW IT UP KURT!!
-    bomb_space(cord_rand);
+    bomb_space_(cord_rand);
 }
 
 Battleships::~Battleships()
