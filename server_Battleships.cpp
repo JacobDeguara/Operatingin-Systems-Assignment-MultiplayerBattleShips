@@ -58,6 +58,8 @@ public:
 
     /* --- Game_ended --- state: END --- */
 
+    bool game_end();
+
     /* --- Default Values --- */
 
     int *print_num;
@@ -297,6 +299,23 @@ bool Battleships::game_start_ship(int cli_id)
 
 bool Battleships::add_ships(std::vector<ship_placement> ship_list, int cli_id)
 {
+    /* --- check if ship format is correct (no overlaps, no out of bounce)--- */
+    int res = ship_format_confirmer(ship_list);
+    if (res == 1)
+    {
+        print_line();
+        printf("%3d - ship_list of player %d is over the limit\n", (*print_num)++, cli_id);
+        print_line();
+        return false;
+    }
+    else if (res == 2)
+    {
+        print_line();
+        printf("%3d - ship_list of player %d has overlapping ships\n", (*print_num)++, cli_id);
+        print_line();
+        return false;
+    }
+
     /* --- this will only happen if we are in ship state --- */
     if (state == ship)
     {
@@ -610,8 +629,6 @@ bool Battleships::run_KURT() // true -> re-do else false -> it ran possibly not 
     std::uniform_int_distribution<std::mt19937::result_type> rand_board_gen(0, players.size() - 1);
     std::uniform_int_distribution<std::mt19937::result_type> rand_pos_gen(0, 9);
 
-    printf("%3d - K.U.R.T getting enemy board\n", (*print_num)++);
-
     // random number between 0-3 such that it isnt current_player and that player isnt dead
     int rand_board = rand_board_gen(rng);
 
@@ -620,8 +637,6 @@ bool Battleships::run_KURT() // true -> re-do else false -> it ran possibly not 
     {
         rand_board = rand_board_gen(rng);
     }
-
-    printf("%3d - K.U.R.T getting enemy position to hit\n", (*print_num)++);
 
     // random number between 0 - 9 such that it hasnt been hit yet
     int rand_x = rand_pos_gen(rng);
@@ -634,20 +649,24 @@ bool Battleships::run_KURT() // true -> re-do else false -> it ran possibly not 
         int rand_x = rand_pos_gen(rng);
         int rand_y = rand_pos_gen(rng);
         count++;
-        if (count == 1000)
+        if (count == 15)
         {
-            printf("%3d - random went over 1000 random limit please restart KURT\n", (*print_num)++);
-            return true; // instead of returning true we can just run kurt until it hits (but i dont trust it, it gave me unexpected results)
+            printf("%3d - KURT went over 15 random limit, resetting KURT\n", (*print_num)++);
+            std::random_device dev;
+            std::mt19937 rng('K' + 'U' + 'R' + 'T' + dev());
+            // instead of returning true we can just run kurt until it hits (but i dont trust it, it gave me unexpected results)
+            count = 0;
             break;
         }
     }
 
-    printf("%3d - K.U.R.T filling Artilliary \n", (*print_num)++);
     // add it to cords struct
     cord_board cord_rand;
     cord_rand.x = rand_x;
     cord_rand.y = rand_y;
     cord_rand.cli_id = players.at(rand_board).cli_id;
+
+    printf("%3d - K.U.R.T hitting player %d \n", (*print_num)++, players.at(rand_board).cli_id);
 
     // BLOW IT UP KURT!!
     return bomb_space(cord_rand, head->cli_id); // since true means shot again then return true which => shot again then shot again
@@ -741,6 +760,24 @@ bool Battleships::run_KURT_ships() // true if it succeeds , else false if it fai
         }
     }
     return true;
+}
+
+bool Battleships::game_end()
+{
+    int count = players.size();
+    for (size_t i = 0; i < players.size(); i++)
+    {
+        if (players.at(i).state == Dead)
+        {
+            count--;
+        }
+    }
+
+    if (count == 1)
+    {
+        return true;
+    }
+    return false;
 }
 
 Battleships::~Battleships()

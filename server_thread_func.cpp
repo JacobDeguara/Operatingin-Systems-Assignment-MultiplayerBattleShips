@@ -375,7 +375,7 @@ void *settings_thread(void *arg)
                 if (flag) // true
                 {
                     printf("%3d - Ships added to game...\n", (*data->print_num)++);
-                    int res = 1; // ship added
+                    int res = 0; // ship added
                     efd = write(data->client->sfd, (char *)&res, sizeof(int));
                     if (efd < 0)
                     {
@@ -389,7 +389,7 @@ void *settings_thread(void *arg)
                     {
 
                         printf("%3d - ships wrong format...\n", (*data->print_num)++);
-                        int res = 0; // ship not correct format
+                        int res = ship_format_confirmer(ship_list_vec); // ship not correct format
                         efd = write(data->client->sfd, (char *)&res, sizeof(int));
                         if (efd < 0)
                         {

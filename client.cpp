@@ -344,6 +344,18 @@ void client::add_ship_general_settings(std::string ship_str, int sfd)
         return;
     }
 
+    if (ship_str.compare("check") == 0)
+    {
+        int res = ship_format_confirmer(ship_list);
+
+        if (res == 0)
+            disp->linger_message("ships are in correct format");
+        else if (res == 1)
+            disp->linger_message("ships not correct format: Out of bounce error");
+        else if (res == 2)
+            disp->linger_message("ships not correct format: Overlapping error");
+    }
+
     if (ship_str.compare("push") == 0)
     {
         if (ship_list.size() != 7)
@@ -366,10 +378,12 @@ void client::add_ship_general_settings(std::string ship_str, int sfd)
         if (efd = read(sfd, &res, sizeof(int)))
             return;
 
-        if (res == 1)
+        if (res == 0)
             disp->linger_message("ships added to game");
-        else if (res == 0)
-            disp->linger_message("ships not added: not correct format");
+        else if (res == 1)
+            disp->linger_message("ships not added: not correct format (Out of bounce error)");
+        else if (res == 2)
+            disp->linger_message("ships not added: not correct format (Overlapping error)");
         else if (res == -1)
             disp->linger_message("ships not added: game not waiting for ships to be added");
         else
@@ -378,6 +392,8 @@ void client::add_ship_general_settings(std::string ship_str, int sfd)
 
     if (check_format(ship_str) == 0)
     {
+        // here you can check the ship again before it has to be push and then cleared again and stuff
+        // using ship_format_confirmer()
         if (ship_list.size() < 7)
         {
             ship_placement sp;

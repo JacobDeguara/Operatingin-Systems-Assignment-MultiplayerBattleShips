@@ -214,4 +214,61 @@ struct multiple_ship_checker
     }
 };
 
+/* ship format [kɔ̃fiʀme]
+
+    return:
+    0 => success
+    1 => fail - out of scope (x >= 10 || y >= 10)
+    2 => fail - matching pair
+*/
+int ship_format_confirmer(std::vector<ship_placement> ship_list)
+{
+    std::vector<cord> cord_list;
+
+    /* --- populate cord_list with all the cordinates of the ships --- */
+    for (size_t i = 0; i < ship_list.size(); i++)
+    {
+        int count = size_of_ship(ship_list.at(i).ship); // size: 5,4,3,2,1
+
+        for (size_t j = 0; j < count; j++)
+        {
+            cord pos;
+            int xplus = 0;
+            int yplus = 0;
+
+            if (ship_list.at(i).hor)
+                xplus = j;
+            else
+                yplus = j;
+
+            pos.x = ship_list.at(i).x + xplus;
+            pos.y = ship_list.at(i).y + yplus;
+
+            cord_list.push_back(pos);
+        }
+    }
+
+    /* --- check for over the limit numbers --- */
+    for (size_t i = 0; i < cord_list.size(); i++)
+    {
+        if (cord_list.at(i).x >= 10 || cord_list.at(i).y >= 10)
+        {
+            return 1;
+        }
+    }
+
+    /* --- check for matching pairs --- */ // (there is very possible faster way of doing this but i dont feel like doing that)
+    for (size_t i = 0; i < cord_list.size(); i++)
+    {
+        for (size_t j = i + 1; j < cord_list.size(); j++)
+        {
+            if ((cord_list.at(i).x == cord_list.at(j).x) && (cord_list.at(i).y == cord_list.at(j).y))
+            {
+                return 2;
+            }
+        }
+    }
+
+    return 0;
+}
 #endif // __SERVER_BATTLESHIPS_STRUCT_H__
