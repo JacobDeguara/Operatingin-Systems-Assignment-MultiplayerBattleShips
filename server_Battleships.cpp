@@ -84,6 +84,7 @@ public:
     void clear_board(bb *board, int cli_id);    // clears the board passed with '-' and adds @cli_id added
     std::vector<bb> get_show_boards();
     void sink_all_ships(int cli_id);
+    bool are_all_players_AI();
 };
 
 Battleships::Battleships(int *print_num)
@@ -777,7 +778,7 @@ bool Battleships::game_end()
     {
         return true;
     }
-    return false;
+    return are_all_players_AI();
 }
 
 Battleships::~Battleships()
@@ -984,6 +985,20 @@ void Battleships::sink_all_ships(int cli_id)
             break;
         }
     }
+}
+
+bool Battleships::are_all_players_AI()
+{
+    bool flag = true;
+    for (size_t i = 0; i < players.size(); i++)
+    {
+        if (players.at(i).state != AI)
+        {
+            flag = false;
+            break;
+        }
+    }
+    return flag;
 }
 
 #endif // __SERVER_BATTLESHIPS_H__
