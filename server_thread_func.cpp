@@ -285,15 +285,18 @@ void *settings_thread(void *arg)
              *  ( 1) - lets you switch from player to spectator
              *  ( ect..)
              */
-            std::vector<player_data> list;
 
-            switch (req)
+            /* --- remove player --- */
+            if (req == -1)
             {
-            case -1: // remove player
                 printf("%3d - Player %d decided to disconnect\n", (*data->print_num)++, data->client->cli_id);
                 return NULL;
-                break;
-            case 0: // update players
+            }
+
+            /* --- give player, player list --- */
+            if (req == 0)
+            {
+                std::vector<player_data> list;
                 settings_request_playerlist srp;
                 list = data->game->get_players_all();
 
@@ -307,9 +310,11 @@ void *settings_thread(void *arg)
                     return NULL;
                 }
                 printf("%3d - Player %d recived Players list..\n", (*data->print_num)++, data->client->cli_id);
+            }
 
-                break;
-            case 1: // switch player state
+            /* --- switch to player to spectator or vice versa --- */
+            if (req == 1)
+            {
                 player_data new_id = data->game->switch_player(data->client->cli_id);
 
                 efd = write(data->client->sfd, (char *)&new_id, sizeof(player_data));
@@ -319,9 +324,9 @@ void *settings_thread(void *arg)
                     return NULL;
                 }
                 printf("%3d - Player %d new information changed and sent...\n", (*data->print_num)++, data->client->cli_id);
-                break;
             }
-            // switch was causeing errors if case 2: ?????
+
+            /* --- start game request --- */
             if (req == 2)
             {
                 bool flag = data->game->game_start_ship(data->client->cli_id);
@@ -349,6 +354,7 @@ void *settings_thread(void *arg)
                 }
             }
 
+            /* --- add ships to game from player --- */
             if (req == 3)
             {
                 ship_placement ships_list[7];
@@ -410,6 +416,53 @@ void *settings_thread(void *arg)
                         }
                     }
                 }
+            }
+
+            /* --- give player, board list --- */
+            if (req == 4)
+            {
+                /* --- get board list --- */
+                std::vector<bb> board_list;
+
+                if (data->game->get_game_state() == 2) // boards have been created & possibly changed
+                {
+                    board_list = data->game->get_show_boards();
+                }
+                else
+                {
+                    auto players = data->game->get_players_all();
+
+                    for (size_t i = 0; i < players.size(); i++)
+                    {
+                        if (players.at(i).state == Player)
+                        {
+                            bb board;
+                            data->game->clear_board(&board, players.at(i).cli_id);
+                            board_list.push_back(board);
+                        }
+
+                        bb board;
+                    }
+                }
+
+                /* --- this shouldnt happen, but if board_list.size() > 4 it gets reduced to 4  ---*/
+                while (board_list.size() > 4)
+                {
+                    board_list.pop_back();
+                }
+
+                /* --- setup board list in request package --- */
+                settings_request_boardlist srb;
+                srb.size = board_list.size();
+                std::copy(board_list.begin(), board_list.end(), srb.board_list);
+
+                efd = write(data->client->sfd, (char *)&srb, srb.size * sizeof(bb) + sizeof(int));
+                if (efd < 0)
+                {
+                    printf("%3d - Player %d went away \n", (*data->print_num)++, data->client->cli_id);
+                    return NULL;
+                }
+                printf("%3d - Player %d recived board list..\n", (*data->print_num)++, data->client->cli_id);
             }
 
             memset(&req, -2, sizeof(int));

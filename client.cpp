@@ -329,6 +329,27 @@ int client::general_settings(std::string str, int sfd, player_data *pd)
             disp->linger_message("Game wasn't started");
         else if (res == 1)
             disp->linger_message("Game started");
+
+        return 1;
+    }
+    else if (str.compare("updateb") == 0)
+    {
+        req = 4;
+        if ((efd = write(sfd, &req, sizeof(req))) < 0)
+            return -1;
+
+        settings_request_boardlist srb;
+
+        efd = (read(sfd, &srb.size, sizeof(int)));
+        if (efd < 0)
+            return -1;
+
+        efd = (read(sfd, &srb.board_list, srb.size * sizeof(bb)));
+        if (efd < 0)
+            return -1;
+
+        disp->linger_message("Board Updated");
+        return 1;
     }
     return 0;
 }

@@ -62,6 +62,12 @@ struct settings_request_playerlist
     player_data player_list[30];
 };
 
+struct settings_request_boardlist
+{
+    int size;
+    bb board_list[4];
+};
+
 struct megamain_shared_data
 {
     Battleships *game; // game iteself
