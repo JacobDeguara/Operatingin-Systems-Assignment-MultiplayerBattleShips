@@ -30,7 +30,10 @@ class client
 {
 private:
     client_display *disp = new client_display();
+    settings_request_playerlist srp;
     int general_settings(std::string str, int sfd, player_data *pd);
+    void send_position(std::string pos_str, int cfd, bool *yourflag);
+    bool does_player_exists(int cli_id);
 
     /* --- adding ships --- */
     void add_ship_general_settings(std::string ship_str, int sfd);
@@ -38,6 +41,7 @@ private:
     int ship_count = 0;
 
     bool ended = true;
+    bool your_turn_flag = false;
     bool ended2 = false; // these dont make any sense in boolean aspects but they work :^)
     std::vector<ship_placement> ship_list;
 
@@ -73,6 +77,8 @@ void client::tcp_connect_server(int argc, char *argv[])
     tcbd.disp = this->disp;
     tcbd.threadc = &threads_global;
     tcbd.ended = &(this->ended);
+    bool your_flag = false;
+    tcbd.your_turn_flag = &(your_flag);
 
     portno = atoi(argv[2]);
 
@@ -206,6 +212,7 @@ void client::tcp_connect_server(int argc, char *argv[])
     this->ended2 = true;
 
     tcbd.player_id = &pd;
+    tcbd.srp = &(this->srp);
 
     if (pthread_create(&threads_global.update_thread, NULL, update_thread, &tcbd) != 0)
         handle_error("thread");
@@ -242,8 +249,14 @@ void client::tcp_connect_server(int argc, char *argv[])
         }
         else if (efd == 1)
         {
-            printf("skiped\n");
             continue;
+        }
+
+        if (strncmp(str.c_str(), "hit", 3) == 0)
+        {
+            str.erase(0, 4);
+            printf("-%s-\n", str.c_str());
+            send_position(str, cfd, &your_flag);
         }
 
         // ship func to add ships
@@ -304,8 +317,6 @@ int client::general_settings(std::string str, int sfd, player_data *pd)
         req = 0;
         if ((efd = write(sfd, &req, sizeof(req))) < 0)
             return -1;
-
-        settings_request_playerlist srp;
 
         efd = (read(sfd, &srp.size, sizeof(int)));
         if (efd < 0)
@@ -506,6 +517,68 @@ void client::add_ship_general_settings(std::string ship_str, int sfd)
     }
 }
 
+void client::send_position(std::string pos_str, int cfd, bool *yourflag)
+{
+    // [0-9] [A-J] [board num]
+
+    if (*yourflag == false)
+    {
+        disp->linger_message("You cannot send a shot since its not your turn");
+        return;
+    }
+
+    int check = check_format_hit(pos_str);
+
+    if (check == 1)
+    {
+        disp->linger_message("Wrong format: must be greater then 2 characters");
+        return;
+    }
+    else if (check == 2)
+    {
+        disp->linger_message("Wrong format: must start with [0-9]");
+        return;
+    }
+    else if (check == 3)
+    {
+        disp->linger_message("Wrong format: second character must be [A-J]");
+        return;
+    }
+    else if (check == 4)
+    {
+        disp->linger_message("Wrong format: thrid charcater onwards (cli_id) must be numbers");
+        return;
+    }
+
+    cord_board cb;
+    cb.x = char_pos(pos_str.at(1));
+    cb.y = atoi(&pos_str.at(0));
+
+    int cli_id;
+    std::string cli_id_sting;
+    cli_id_sting = pos_str;
+    cli_id_sting.erase(0, 2);
+    cli_id = std::stoi(cli_id_sting);
+    cb.cli_id = cli_id;
+
+    if (!does_player_exists(cli_id))
+    {
+        disp->linger_message("player with cli_id " + std::to_string(cb.cli_id) + " doesnt exists or is dead or is spectator idk...");
+        return;
+    }
+
+    std::string str = "Hitting position x:" + std::to_string(cb.x) + " y:" + std::to_string(cb.y) + " board:" + std::to_string(cb.cli_id);
+    disp->linger_message(str);
+
+    /* --- send pos to game --- */
+    int efd;
+    efd = write(cfd, (char *)&cb, sizeof(cord_board));
+    if (efd > 0)
+        return;
+
+    *yourflag = false;
+}
+
 client::~client()
 {
     /* --- wait until collapse thread closes --- */
@@ -515,12 +588,27 @@ client::~client()
     {
         s = pthread_join(threads_global.collapse_thread, &ret); // while true loop
         if (s != 0)
-            handle_error_ernum(s, "pthread_join");
+            handle_error_ernum(s, "pthread_join- update");
     }
 
     printf("Program Closed...\n");
 
     free(disp);
+}
+
+bool client::does_player_exists(int cli_id)
+{
+    for (size_t i = 0; i < srp.size; i++)
+    {
+        if (srp.player_list[i].state == Player || srp.player_list[i].state == AI || srp.player_list[i].state == Alive)
+        {
+            if (srp.player_list[i].cli_id == cli_id)
+            {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 #endif // __CLIENT_NETWORKING_H__

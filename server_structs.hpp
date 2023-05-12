@@ -123,7 +123,8 @@ struct tcp_client_bulk_data
     char *ip;
     player_data *player_id;
     thread_containter *threadc;
-    bool *ended;
+    bool *ended, *your_turn_flag;
+    settings_request_playerlist *srp;
 };
 
 #endif // __SERVER_STRUCTS_H__

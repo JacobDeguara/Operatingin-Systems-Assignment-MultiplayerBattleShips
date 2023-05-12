@@ -56,4 +56,33 @@ int check_format(std::string str) // [0-9][A-J](h/v)
     return 0;
 }
 
+int check_format_hit(std::string str)
+{
+    if (str.size() < 2)
+    {
+        return 1;
+    }
+
+    if (!((str.at(0) >= '0') && (str.at(0) <= '9')))
+    {
+        printf("not 0-9 ");
+        return 2;
+    }
+
+    if (!((str.at(1) >= 'A') && (str.at(1) <= 'J')))
+    {
+        printf("not A-J");
+        return 3;
+    }
+
+    for (size_t i = 2; i < str.size(); i++)
+    {
+        if (!((str.at(i) >= '0') && (str.at(i) <= '9')))
+        {
+            printf("not 0-9 ");
+            return 4;
+        }
+    }
+    return 0;
+}
 #endif // __SERVER_UTIL_FUNC_H__

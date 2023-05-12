@@ -246,8 +246,8 @@ void *megamain_thread(void *arg)
             printf("%3d -main_Func ran KURT\n", (*data->print_num)++);
             hit_flag = data->game->run_KURT();
 
-            sleep(2);
             data->flag3 = true;
+            sleep(2);
         }
         else
         {
@@ -268,6 +268,7 @@ void *megamain_thread(void *arg)
                 printf("%3d -main_Func bomb space\n", (*data->print_num)++);
                 hit_flag = data->game->bomb_space(data->pos_hit, data->next_cli);
             }
+            sleep(2);
         }
 
         if (hit_flag)
@@ -590,10 +591,6 @@ void *main_thread(void *arg)
             sleep(1);
         }
 
-        if (data->mmsd->next_cli == -2)
-        {
-            break;
-        }
         printf("%3d - writing to Player %d, next player is %d\n", (*data->print_num)++, data->client->cli_id, data->mmsd->next_cli);
 
         /* --- send client game package to player --- */
@@ -608,6 +605,11 @@ void *main_thread(void *arg)
             {
                 sleep(1);
             }
+        }
+
+        if (data->mmsd->next_cli == -2)
+        {
+            break;
         }
 
         /* --- setup board list in request package --- */
@@ -631,12 +633,12 @@ void *main_thread(void *arg)
         {
             /* --- setup select with timer --- */
             struct timeval tv;
-            tv.tv_sec = 5;
+            tv.tv_sec = 60; // sec
             tv.tv_usec = 0;
 
             printf("%3d - waiting for Player %d, to provide pos\n", (*data->print_num)++, data->client->cli_id);
 
-            retval = select(FD_SETSIZE, &rfds, NULL, NULL, NULL);
+            retval = select(FD_SETSIZE, &rfds, NULL, NULL, &tv);
 
             if (retval == -1)
                 perror("select()");

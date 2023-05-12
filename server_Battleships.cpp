@@ -20,6 +20,8 @@ enum game_states
     end
 };
 
+std::string get_player_state_as_string_battleships(status s);
+
 class Battleships
 {
 private:
@@ -264,13 +266,13 @@ void Battleships::display_players()
     printf("Players: \n");
     for (size_t i = 0; i < players.size(); i++)
     {
-        printf("> %15s , %d \n", players.at(i).name, players.at(i).cli_id);
+        printf("> %15s , %d %s\n", players.at(i).name, players.at(i).cli_id, get_player_state_as_string_battleships(players.at(i).state).c_str());
     }
 
     printf("Spectators: \n");
     for (size_t i = 0; i < spectators.size(); i++)
     {
-        printf("- %15s , %d \n", spectators.at(i).name, spectators.at(i).cli_id);
+        printf("- %15s , %d\n", spectators.at(i).name, spectators.at(i).cli_id);
     }
 
     print_line();
@@ -364,7 +366,10 @@ bool Battleships::game_start()
     for (size_t i = 0; i < players.size(); i++)
     {
         /* --- players.state -> Players => Alive --- */
-        players.at(i).state = Alive;
+        if (players.at(i).state == Player)
+        {
+            players.at(i).state = Alive;
+        }
 
         bb board;
         clear_board(&board, players.at(i).cli_id);
@@ -388,6 +393,7 @@ bool Battleships::game_start()
     this->state = game;
     printf("%3d - Game state changed to GAME game has started\n", (*print_num)++);
     print_line();
+    display_players();
     display_boards();
 
     /* --- sets up next player data struct ---*/
@@ -694,7 +700,7 @@ bool Battleships::run_KURT_ships() // true if it succeeds , else false if it fai
     /* --- setup AI's with ships cause they might not have any ---*/
     for (size_t i = 0; i < players.size(); i++)
     {
-        if (players.at(i).state = AI)
+        if (players.at(i).state == AI)
         {
             bool has_no_ship_flag = true;
 
@@ -999,6 +1005,25 @@ bool Battleships::are_all_players_AI()
         }
     }
     return flag;
+}
+
+std::string get_player_state_as_string_battleships(status s)
+{
+    switch (s)
+    {
+    case Player:
+        return "Player";
+    case Alive:
+        return "Alive";
+    case Dead:
+        return "Dead";
+    case AI:
+        return "AI";
+    case Spectator:
+        return "Spectator";
+    default:
+        return " ";
+    }
 }
 
 #endif // __SERVER_BATTLESHIPS_H__

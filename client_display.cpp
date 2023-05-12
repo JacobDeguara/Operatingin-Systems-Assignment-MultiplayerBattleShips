@@ -99,7 +99,7 @@ void client_display::display_players(settings_request_playerlist srp)
         {
             for (int pos = 0; pos < boards.size(); pos++)
             {
-                printf("%2d ", (y + 1));
+                printf("%2d ", (y));
 
                 for (int x = 0; x < 10; x++)
                 {
@@ -113,7 +113,7 @@ void client_display::display_players(settings_request_playerlist srp)
 
         for (int i = 0; i < boards.size(); i++)
         {
-            printf(" Player: %-15s", srp.player_list[i].name);
+            printf(" Player: %-15s %d", srp.player_list[i].name, srp.player_list[i].cli_id);
         }
         printf("\n");
     }

@@ -50,6 +50,8 @@ void *update_thread(void *arg)
             handle_error("read");
 
         data->disp->display_players(srp);
+
+        memcpy(data->srp, &srp, sizeof(settings_request_playerlist));
     }
 
     data->disp->display_players(srp);
@@ -65,15 +67,15 @@ void *collapse_thread(void *arg)
     void *ret;
     ert_j = pthread_join(data->threadc->update_thread, &ret);
     if (ert_j != 0)
-        handle_error_ernum(ert_j, "pthread_join");
+        handle_error_ernum(ert_j, "pthread_join- update");
 
     ert_j = pthread_cancel(data->threadc->main_thread);
     if (ert_j != 0)
-        handle_error_ernum(ert_j, "pthread_cancel");
+        handle_error_ernum(ert_j, "pthread_cancel- main");
 
     ert_j = pthread_join(data->threadc->main_thread, &ret);
     if (ert_j != 0)
-        handle_error_ernum(ert_j, "pthread_join");
+        handle_error_ernum(ert_j, "pthread_join- main");
 
     return NULL;
 }
@@ -129,18 +131,43 @@ void *main_thread(void *arg)
         int temp = -1;
         efd = read(*data->cfd, &temp, sizeof(int));
         if (efd < 0)
-            handle_error("read");
+        {
+            data->disp->linger_message("ERROR read 1");
+            while (1)
+            {
+                sleep(1);
+            }
+        }
+
+        if (temp == -2)
+        {
+            break;
+        }
 
         /* ---  update boards --- */
+
+        retval = select(1024, &rfds, NULL, NULL, NULL);
         settings_request_boardlist srb;
 
         efd = (read(*data->cfd, &srb.size, sizeof(int)));
         if (efd < 0)
-            handle_error("read");
+        {
+            data->disp->linger_message("ERROR read 2");
+            while (1)
+            {
+                sleep(1);
+            }
+        }
 
         efd = (read(*data->cfd, &srb.board_list, srb.size * sizeof(bb)));
         if (efd < 0)
-            handle_error("read");
+        {
+            data->disp->linger_message("ERROR read 3");
+            while (1)
+            {
+                sleep(1);
+            }
+        }
 
         data->disp->linger_message("Board Updated");
 
@@ -150,6 +177,8 @@ void *main_thread(void *arg)
         {
             data->disp->important_message(" your turn ");
             data->disp->linger_message(std::to_string(temp));
+
+            *data->your_turn_flag = true;
         }
         else
         {
@@ -157,6 +186,17 @@ void *main_thread(void *arg)
             data->disp->linger_message(std::to_string(temp));
         }
     } while (1);
+
+    std::string str;
+    for (size_t i = 0; i < data->srp->size; i++)
+    {
+        if (data->srp->player_list[i].state == Alive)
+        {
+            str.append(data->srp->player_list[i].name);
+        }
+    }
+
+    data->disp->important_message("GAME ENDED!! WINNER IS " + str);
 
     while (1)
     {
