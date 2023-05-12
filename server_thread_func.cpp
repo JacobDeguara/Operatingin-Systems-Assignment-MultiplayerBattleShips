@@ -236,12 +236,14 @@ void *megamain_thread(void *arg)
             data->next_cli = -1; // => AI
         }
 
+        printf("%3d -main_Func next player %d\n", (*data->print_num)++, data->next_cli);
         /* --- switch flag ---*/
         data->flag3 = false;
 
         bool hit_flag = false; // dictates weather a a bomb has hit or not
         if (data->next_cli == -1)
         {
+            printf("%3d -main_Func ran KURT\n", (*data->print_num)++);
             hit_flag = data->game->run_KURT();
 
             sleep(2);
@@ -249,33 +251,43 @@ void *megamain_thread(void *arg)
         }
         else
         {
+            printf("%3d -main_Func waiting for player\n", (*data->print_num)++);
             while (!data->flag3)
             {
                 sleep(1);
             }
 
+            printf("%3d -main_Func player responded\n", (*data->print_num)++);
             if (data->pos_player_info == 1)
             {
+                printf("%3d -main_Func ran KURT\n", (*data->print_num)++);
                 hit_flag = data->game->run_KURT();
             }
             else if (data->pos_player_info == 0)
             {
+                printf("%3d -main_Func bomb space\n", (*data->print_num)++);
                 hit_flag = data->game->bomb_space(data->pos_hit, data->next_cli);
             }
         }
 
         if (hit_flag)
         {
+            printf("%3d -main_Func player %d play again\n", (*data->print_num)++, data->next_cli);
             data->game->move_back_player_node();
         }
 
     } while (!data->game->game_end());
 
+    printf("%3d -main_Func Game ended\n", (*data->print_num)++);
     data->next_cli = -2; // indicating the end of the game
     data->flag3 = false;
 
     sleep(5);
     ctrlhandler(1); // this should close the server
+    while (1)
+    {
+        sleep(1);
+    }
     return NULL;
 }
 
@@ -541,8 +553,10 @@ void *main_thread(void *arg)
     efd = write(data->client->cfd, &meta_data_game_started, sizeof(int));
     if (efd < 0)
     {
-        printf("%3d - Player %d went away \n", (*data->print_num)++, data->client->cli_id);
-        return NULL;
+        while (1)
+        {
+            sleep(1);
+        }
     }
 
     while (data->mmsd->flag2)
@@ -556,12 +570,20 @@ void *main_thread(void *arg)
     efd = write(data->client->cfd, &meta_data_game_started, sizeof(int));
     if (efd < 0)
     {
-        printf("%3d - Player %d went away \n", (*data->print_num)++, data->client->cli_id);
-        return NULL;
+        while (1)
+        {
+            sleep(1);
+        }
     }
+
+    fd_set rfds;
+    int retval;
+    FD_ZERO(&rfds);
+    FD_SET(data->client->cfd, &rfds);
 
     do
     {
+        printf("%3d - Player %d cfd waiting for megamain \n", (*data->print_num)++, data->client->cli_id);
         /* --- wait for flag to switch --- */
         while (data->mmsd->flag3)
         {
@@ -572,33 +594,47 @@ void *main_thread(void *arg)
         {
             break;
         }
+        printf("%3d - writing to Player %d, next player is %d\n", (*data->print_num)++, data->client->cli_id, data->mmsd->next_cli);
 
         /* --- send client game package to player --- */
-        client_game_package cgp;
-        cgp.next_cli_id = data->mmsd->next_cli;
+        int temp = data->mmsd->next_cli;
 
-        auto board_list = data->game->get_show_boards();
-        cgp.size = board_list.size();
-        std::copy(board_list.begin(), board_list.end(), cgp.board_list);
-
-        efd = write(data->client->cfd, (char *)&cgp, cgp.size * sizeof(bb) + sizeof(int) + sizeof(int));
+        /* --- send player game started => GAME---*/
+        efd = write(data->client->cfd, &temp, sizeof(int));
         if (efd < 0)
         {
-            printf("%3d - Player %d went away \n", (*data->print_num)++, data->client->cli_id);
-            return NULL;
+            printf("%3d - player %d left, main put on hold\n", (*data->print_num)++, data->client->cli_id);
+            while (1)
+            {
+                sleep(1);
+            }
+        }
+
+        /* --- setup board list in request package --- */
+        settings_request_boardlist srb;
+        auto board_list = data->game->get_show_boards();
+        srb.size = board_list.size();
+        std::copy(board_list.begin(), board_list.end(), srb.board_list);
+
+        efd = write(data->client->cfd, (char *)&srb, srb.size * sizeof(bb) + sizeof(int));
+        if (efd < 0)
+        {
+            printf("%3d - player %d left, main put on hold\n", (*data->print_num)++, data->client->cli_id);
+            while (1)
+            {
+                sleep(1);
+            }
         }
 
         /* --- if player next is our client --- */
-        if (cgp.next_cli_id == data->client->cli_id)
+        if (data->mmsd->next_cli == data->client->cli_id)
         {
             /* --- setup select with timer --- */
-            fd_set rfds;
             struct timeval tv;
-            int retval;
-            FD_ZERO(&rfds);
-            FD_SET(data->client->cfd, &rfds);
             tv.tv_sec = 5;
             tv.tv_usec = 0;
+
+            printf("%3d - waiting for Player %d, to provide pos\n", (*data->print_num)++, data->client->cli_id);
 
             retval = select(FD_SETSIZE, &rfds, NULL, NULL, NULL);
 
@@ -608,11 +644,14 @@ void *main_thread(void *arg)
             {
                 /* --- Data given in time --- */
                 cord_board pos;
-                efd = read(data->client->sfd, &pos, sizeof(cord_board)); // should only have player name
+                efd = read(data->client->cfd, &pos, sizeof(cord_board)); // should only have player name
                 if (efd < 0)
                 {
-                    printf("%3d - Player %d went away \n", (*data->print_num)++, data->client->cli_id);
-                    return NULL;
+                    printf("%3d - player %d left, main put on hold\n", (*data->print_num)++, data->client->cli_id);
+                    while (1)
+                    {
+                        sleep(1);
+                    }
                 }
 
                 /* --- setup data for mega main (success) --- */
@@ -628,6 +667,11 @@ void *main_thread(void *arg)
                 data->mmsd->pos_player_info = 1;
             }
             data->mmsd->flag3 = true;
+        }
+
+        while (!data->mmsd->flag3)
+        {
+            sleep(1);
         }
 
     } while (1);
@@ -713,14 +757,11 @@ void *collapse_thread(void *arg)
     { // currently its a players turn
         if (data->mmsd->next_cli == data->client->cli_id)
         { // players turn is our client
-            if (data->game->get_game_state() == 2)
-            { // game state == game meaning the game has started
-                /* --- setup megamain AI setup --- */
-
-                data->mmsd->pos_player_info = 1;
-                data->mmsd->flag3 = false;
-            }
+            printf("%3d - megamain allowed to continue after player changed to AI\n", (*data->print_num)++);
+            data->mmsd->pos_player_info = 1;
+            data->mmsd->flag3 = true;
         }
+        printf("%3d - current player not playing\n", (*data->print_num)++);
     }
 
     data->client->removed = true;

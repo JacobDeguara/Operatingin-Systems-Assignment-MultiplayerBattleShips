@@ -110,7 +110,6 @@ void *main_thread(void *arg)
     }
 
     retval = select(1024, &rfds, NULL, NULL, NULL);
-
     if (retval == -1)
         perror("select()");
     else if (retval)
@@ -121,6 +120,43 @@ void *main_thread(void *arg)
 
         data->disp->important_message("GAME STARTED");
     }
+
+    do
+    {
+        retval = select(1024, &rfds, NULL, NULL, NULL);
+
+        /* --- read given package --- */
+        int temp = -1;
+        efd = read(*data->cfd, &temp, sizeof(int));
+        if (efd < 0)
+            handle_error("read");
+
+        /* ---  update boards --- */
+        settings_request_boardlist srb;
+
+        efd = (read(*data->cfd, &srb.size, sizeof(int)));
+        if (efd < 0)
+            handle_error("read");
+
+        efd = (read(*data->cfd, &srb.board_list, srb.size * sizeof(bb)));
+        if (efd < 0)
+            handle_error("read");
+
+        data->disp->linger_message("Board Updated");
+
+        data->disp->add_board(srb);
+
+        if (temp == data->player_id->cli_id)
+        {
+            data->disp->important_message(" your turn ");
+            data->disp->linger_message(std::to_string(temp));
+        }
+        else
+        {
+            data->disp->important_message(" Other player turn");
+            data->disp->linger_message(std::to_string(temp));
+        }
+    } while (1);
 
     while (1)
     {

@@ -187,6 +187,7 @@ void client::tcp_connect_server(int argc, char *argv[])
     if (efd < 0)
         handle_error("read");
 
+    disp->setup_us(pd);
     /* --- display player data ---*/
     if (pd.state == Spectator)
         printf("You are a Spectator, Player %s\n", pd.name);
@@ -203,6 +204,8 @@ void client::tcp_connect_server(int argc, char *argv[])
 
     this->ended = false;
     this->ended2 = true;
+
+    tcbd.player_id = &pd;
 
     if (pthread_create(&threads_global.update_thread, NULL, update_thread, &tcbd) != 0)
         handle_error("thread");
@@ -349,6 +352,8 @@ int client::general_settings(std::string str, int sfd, player_data *pd)
             return -1;
 
         disp->linger_message("Board Updated");
+
+        disp->add_board(srb);
         return 1;
     }
     return 0;
@@ -362,6 +367,57 @@ void client::add_ship_general_settings(std::string ship_str, int sfd)
         disp->linger_message("cleared ship list");
         disp->copy_ship_list(ship_list);
         this->ship_count = 0;
+        return;
+    }
+
+    if (ship_str.compare("default") == 0)
+    {
+        ship_placement sp;
+        {
+            sp.hor = true;
+            sp.ship = 'A';
+            sp.x = 0;
+            sp.y = 0;
+            ship_list.push_back(sp);
+
+            sp.hor = true;
+            sp.ship = 'B';
+            sp.x = 0;
+            sp.y = 1;
+            ship_list.push_back(sp);
+
+            sp.hor = true;
+            sp.ship = 'C';
+            sp.x = 0;
+            sp.y = 2;
+            ship_list.push_back(sp);
+
+            sp.hor = true;
+            sp.ship = 'D';
+            sp.x = 0;
+            sp.y = 3;
+            ship_list.push_back(sp);
+
+            sp.hor = true;
+            sp.ship = 'S';
+            sp.x = 0;
+            sp.y = 4;
+            ship_list.push_back(sp);
+
+            sp.hor = true;
+            sp.ship = 'D';
+            sp.x = 0;
+            sp.y = 5;
+            ship_list.push_back(sp);
+
+            sp.hor = true;
+            sp.ship = 'S';
+            sp.x = 0;
+            sp.y = 6;
+            ship_list.push_back(sp);
+        }
+        disp->copy_ship_list(ship_list);
+        this->ship_count = 7;
         return;
     }
 

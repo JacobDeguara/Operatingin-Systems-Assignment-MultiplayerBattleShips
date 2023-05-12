@@ -9,6 +9,8 @@
 
 #define MAXLINGER 10
 
+std::string get_player_state_as_string(status s);
+
 class client_display
 {
 private:
@@ -18,6 +20,10 @@ private:
     std::string msg;
     int count = 0;
 
+    std::vector<bb> boards;
+    bool board_flag = false;
+
+    player_data player;
     std::vector<ship_placement> ship_list;
 
 public:
@@ -27,6 +33,8 @@ public:
     void linger_message(std::string msg);
     void important_message(std::string msg);
     void display_players(settings_request_playerlist srp);
+    void setup_us(player_data pd);
+    void add_board(settings_request_boardlist srb);
     std::string getin();
     void copy_ship_list(std::vector<ship_placement> copy);
 };
@@ -35,11 +43,17 @@ client_display::client_display()
 {
 }
 
+void client_display::setup_us(player_data pd)
+{
+    this->player = pd;
+}
+
 void client_display::display_players(settings_request_playerlist srp)
 {
     system("clear");
     printf("\n");
     printf("--- %s ---\n", imp_msg.c_str());
+    printf("-You are a %s, %s ,%d\n", get_player_state_as_string(player.state).c_str(), player.name, player.cli_id);
     print_line();
     printf("Currently connected players:\n");
 
@@ -49,7 +63,7 @@ void client_display::display_players(settings_request_playerlist srp)
     {
         if (srp.player_list[i].state != Spectator)
         {
-            printf("> %-15s\n", srp.player_list[i].name);
+            printf("> %-15s %d %s\n", srp.player_list[i].name, srp.player_list[i].cli_id, get_player_state_as_string(srp.player_list[i].state).c_str());
         }
         else
         {
@@ -60,7 +74,7 @@ void client_display::display_players(settings_request_playerlist srp)
     printf("Spectators:\n");
     for (; i < srp.size; i++)
     {
-        printf("> %-15s\n", srp.player_list[i].name);
+        printf("> %-15s %d %s\n", srp.player_list[i].name, srp.player_list[i].cli_id, get_player_state_as_string(srp.player_list[i].state).c_str());
     }
     print_line();
     if (ship_list.size() != 0)
@@ -72,6 +86,38 @@ void client_display::display_players(settings_request_playerlist srp)
         print_line();
     }
 
+    if (board_flag)
+    {
+        print_line();
+        for (size_t i = 0; i < boards.size(); i++)
+        {
+            printf("   A B C D E F G H I J  ");
+        }
+        printf("\n");
+
+        for (int y = 0; y < 10; y++)
+        {
+            for (int pos = 0; pos < boards.size(); pos++)
+            {
+                printf("%2d ", (y + 1));
+
+                for (int x = 0; x < 10; x++)
+                {
+                    printf("%c ", boards.at(pos).board[x][y]);
+                }
+                printf(" ");
+            }
+            printf("\n");
+        }
+        printf("\n");
+
+        for (int i = 0; i < boards.size(); i++)
+        {
+            printf(" Player: %-15s", srp.player_list[i].name);
+        }
+        printf("\n");
+    }
+
     if (count > 0)
     {
         printf("- %s -\n\n", msg.c_str());
@@ -79,6 +125,18 @@ void client_display::display_players(settings_request_playerlist srp)
     }
     printf("\n>>> %s", command.c_str());
     fflush(stdout);
+}
+
+void client_display::add_board(settings_request_boardlist srb)
+{
+    boards.clear();
+
+    for (size_t i = 0; i < srb.size; i++)
+    {
+        boards.push_back(srb.board_list[i]);
+    }
+
+    board_flag = true;
 }
 
 void client_display::linger_message(std::string msg)
@@ -142,6 +200,25 @@ std::string client_display::getin()
 void client_display::copy_ship_list(std::vector<ship_placement> copy)
 {
     this->ship_list = copy;
+}
+
+std::string get_player_state_as_string(status s)
+{
+    switch (s)
+    {
+    case Player:
+        return "Player";
+    case Alive:
+        return "Alive";
+    case Dead:
+        return "Dead";
+    case AI:
+        return "AI";
+    case Spectator:
+        return "Spectator";
+    default:
+        return " ";
+    }
 }
 
 #endif // __CLIENT_DISPLAY_H__
