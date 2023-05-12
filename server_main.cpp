@@ -10,8 +10,6 @@
 #include <pthread.h>
 #include <vector>
 
-#include "rw_mutex.h"
-
 int main(int argc, char *argv[])
 {
     if (argc < 2)

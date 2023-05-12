@@ -30,8 +30,6 @@ void ctrlhandler(int dummy)
 #include "server_structs.hpp"
 #include "server_Battleships.cpp"
 #include "server_thread_func.cpp"
-#include "rw_mutex.h"
-#include "rw_mutex.cpp"
 
 struct shared_data
 {
