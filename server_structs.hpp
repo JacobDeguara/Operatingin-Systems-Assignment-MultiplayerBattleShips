@@ -68,6 +68,13 @@ struct settings_request_boardlist
     bb board_list[4];
 };
 
+struct client_game_package
+{
+    int next_cli_id;
+    int size;
+    bb board_list[4];
+};
+
 struct megamain_shared_data
 {
     Battleships *game; // game iteself
@@ -76,8 +83,8 @@ struct megamain_shared_data
     /* --- these will ne shared with main_thread --- */
     bool flag1, flag2, flag3; // flags dectating when things should happen
     int next_cli;             // next player that pos should recive from
-    int pos_player_info;      // 0 => player dead/disconnected , 1 => player new pos_hit, 2 => player never sent shot ( change to KURT )
-    cord pos_hit;             // position hit
+    int pos_player_info;      // 0 => player new pos_hit, 1 => AI
+    cord_board pos_hit;       // position hit
 };
 
 struct tcp_bulk_data

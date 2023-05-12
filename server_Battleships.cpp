@@ -216,8 +216,8 @@ player_data Battleships::remove_player(int cli_id)
             }
             else // ship state only
             {
-                /* --- if player leaves he surrendered --- */
-                player_surrenders(cli_id);
+                /* --- if player leaves he is changed to AI --- */
+                set_player_AI(cli_id);
                 return id;
             }
         }
@@ -225,8 +225,8 @@ player_data Battleships::remove_player(int cli_id)
 
     if (id.state == Alive || id.state == AI)
     {
-        /* --- if player leaves he surrendered --- */
-        player_surrenders(cli_id);
+        /* --- if player leaves he is changed to AI --- */
+        set_player_AI(cli_id);
         return id;
     }
 
@@ -602,7 +602,7 @@ bool Battleships::bomb_space(cord_board bomb, int cli_id) // true -> re-do else 
                 {
                     printf("%3d - Player %d has lost all his ship and is now raising the white flag of surrender\n", (*print_num)++, bomb.cli_id);
                     print_line();
-                    remove_player(bomb.cli_id);
+                    player_surrenders(bomb.cli_id);
                     return true;
                 }
                 print_line();
